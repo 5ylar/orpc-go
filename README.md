@@ -1,5 +1,10 @@
 ## Example usage
 ```go
+import (
+	"context"
+	orpcgo "github.com/5ylar/orpc-go"
+)
+
 type TestRequest struct {
 	Text string `json:"text"`
 }
