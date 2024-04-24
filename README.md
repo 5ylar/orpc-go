@@ -1,4 +1,4 @@
-## example usage
+## Example usage
 ```go
 type TestRequest struct {
 	Text string `json:"text"`
