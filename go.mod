@@ -1,4 +1,4 @@
-module orpc-go
+module github.com/5ylar/orpc-go
 
 go 1.21.0
 

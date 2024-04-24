@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	orpcgo "orpc-go"
+	orpcgo "github.com/5ylar/orpc-go"
 )
 
 type TestRequest struct {
