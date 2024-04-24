@@ -1,10 +1,5 @@
-package main
-
-import (
-	"context"
-	orpcgo "orpc-go"
-)
-
+## example usage
+```go
 type TestRequest struct {
 	Text string `json:"text"`
 }
@@ -26,3 +21,4 @@ func main() {
 
 	_ = o.Start(context.Background())
 }
+```
