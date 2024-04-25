@@ -1,3 +1,6 @@
+# orpc-go
+A simple JSON RPC Server with ability to change HTTP Server behind whatever you like!
+
 ## Quick start
 ```go
 import (
