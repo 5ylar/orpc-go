@@ -14,13 +14,15 @@ type TestReply struct {
 }
 
 func main() {
-	o := orpcgo.NewORPC()
+	o := orpcgo.NewORPC(
+		orpcgo.NewDefaultAdapter(),
+	)
 
-	o.Register("oms.test", func(ctx orpcgo.Context, i *TestRequest) (*TestReply, error) {
+	o.Handle("oms.test", func(c orpcgo.Context, i *TestRequest) (*TestReply, error) {
 		return &TestReply{len(i.Text)}, nil
 	})
 
-	o.Register("oms.test2", func(ctx orpcgo.Context, i *TestRequest) (*TestReply, error) {
+	o.Handle("oms.test2", func(c orpcgo.Context, i *TestRequest) (*TestReply, error) {
 		return &TestReply{1000}, nil
 	})
 

@@ -10,21 +10,25 @@ import (
 )
 
 type Context struct {
-	Ctx context.Context
+	Ctx        context.Context
+	MethodName string
+	Headers    map[string][]string
 }
 
 type ORPC struct {
+	adapter  Adapter
 	handlers map[string]interface{}
 }
 
-func NewORPC() *ORPC {
+func NewORPC(adapter Adapter) *ORPC {
 	return &ORPC{
+		adapter:  adapter,
 		handlers: make(map[string]interface{}),
 	}
 }
 
-func (o *ORPC) Register(name string, h interface{}) *ORPC {
-    htype :=reflect.TypeOf(h)
+func (o *ORPC) Handle(name string, h interface{}) *ORPC {
+	htype := reflect.TypeOf(h)
 
 	ctxtype := htype.In(0)
 	preqtype := htype.In(1)
@@ -60,16 +64,13 @@ func (o *ORPC) Register(name string, h interface{}) *ORPC {
 }
 
 func (o *ORPC) Start(ctx context.Context) error {
-	app := fiber.New()
+	return o.adapter.Start(func(c AdapterCtx) error {
 
-	app.Post("/rpc/:method_name", func(c fiber.Ctx) error {
-		methodName := c.Params("method_name", "")
-
-		if len(strings.TrimSpace(methodName)) == 0 {
+		if len(strings.TrimSpace(c.MethodName)) == 0 {
 			return errors.New("invalid method name")
 		}
 
-		h, ok := o.handlers[methodName]
+		h, ok := o.handlers[c.MethodName]
 
 		if !ok {
 			return errors.New("not found method name")
@@ -77,16 +78,18 @@ func (o *ORPC) Start(ctx context.Context) error {
 
 		preqtype := reflect.TypeOf(h).In(1)
 		preqv := reflect.New(preqtype.Elem())
-		preq := preqv.Interface()
+		preq := preqv.Interface() // pointer
 
-		if err := c.Bind().Body(preq); err != nil {
+		if err := c.Bind(preq); err != nil {
 			return err
 		}
 
 		prepl := reflect.ValueOf(h).Call(
 			[]reflect.Value{
 				reflect.ValueOf(Context{
-					Ctx: c.UserContext(),
+					Ctx:        c.Ctx,
+					MethodName: c.MethodName,
+					Headers:    c.Headers,
 				}),
 				preqv,
 			},
@@ -97,8 +100,7 @@ func (o *ORPC) Start(ctx context.Context) error {
 			return prepl[1].Interface().(error)
 		}
 
-		return c.JSON(prepl[0].Interface())
+		return c.SendJSON(200, prepl[0].Interface())
 	})
-
-	return app.Listen(":8080")
 }
+
