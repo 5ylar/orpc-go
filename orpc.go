@@ -24,10 +24,12 @@ func NewORPC() *ORPC {
 }
 
 func (o *ORPC) Register(name string, h interface{}) *ORPC {
-	ctxtype := reflect.TypeOf(h).In(0)
-	preqtype := reflect.TypeOf(h).In(1)
-	prepltype := reflect.TypeOf(h).Out(0)
-	errtype := reflect.TypeOf(h).Out(1)
+    htype :=reflect.TypeOf(h)
+
+	ctxtype := htype.In(0)
+	preqtype := htype.In(1)
+	prepltype := htype.Out(0)
+	errtype := htype.Out(1)
 
 	if ctxtype != reflect.TypeOf(Context{}) {
 		panic("cannot register")
@@ -60,14 +62,14 @@ func (o *ORPC) Register(name string, h interface{}) *ORPC {
 func (o *ORPC) Start(ctx context.Context) error {
 	app := fiber.New()
 
-	app.Post("/rpc/:name", func(c fiber.Ctx) error {
-		name := c.Params("name", "")
+	app.Post("/rpc/:method_name", func(c fiber.Ctx) error {
+		methodName := c.Params("method_name", "")
 
-		if len(strings.TrimSpace(name)) == 0 {
+		if len(strings.TrimSpace(methodName)) == 0 {
 			return errors.New("invalid method name")
 		}
 
-		h, ok := o.handlers[name]
+		h, ok := o.handlers[methodName]
 
 		if !ok {
 			return errors.New("not found method name")
