@@ -13,19 +13,31 @@ type Context struct {
 	Headers    map[string][]string
 }
 
+type Middleware func(c Context) error
+
+type Handler struct {
+	Middlewares []Middleware
+	H           interface{}
+}
+
 type ORPC struct {
-	adapter  Adapter
-	handlers map[string]interface{}
+	adapter           Adapter
+	handlers          map[string]Handler
+	globalMiddlewares []Middleware
 }
 
 func NewORPC(adapter Adapter) *ORPC {
 	return &ORPC{
 		adapter:  adapter,
-		handlers: make(map[string]interface{}),
+		handlers: make(map[string]Handler),
 	}
 }
 
-func (o *ORPC) Handle(name string, h interface{}) *ORPC {
+func (o *ORPC) SetGlobalMiddlewares(middlewares []Middleware) {
+	o.globalMiddlewares = middlewares
+}
+
+func (o *ORPC) Handle(name string, h interface{}, middlewares ...Middleware) *ORPC {
 	htype := reflect.TypeOf(h)
 
 	ctxtype := htype.In(0)
@@ -57,7 +69,7 @@ func (o *ORPC) Handle(name string, h interface{}) *ORPC {
 		panic("cannot register")
 	}
 
-	o.handlers[name] = h
+	o.handlers[name] = Handler{middlewares, h}
 	return o
 }
 
@@ -74,7 +86,29 @@ func (o *ORPC) Start(ctx context.Context) error {
 			return errors.New("not found method name")
 		}
 
-		preqtype := reflect.TypeOf(h).In(1)
+		hc := Context{
+			Ctx:        c.Ctx,
+			MethodName: c.MethodName,
+			Headers:    c.Headers,
+		}
+
+		for _, m := range o.globalMiddlewares {
+			err := m(hc)
+
+			if err != nil {
+				return err
+			}
+		}
+
+		for _, m := range h.Middlewares {
+			err := m(hc)
+
+			if err != nil {
+				return err
+			}
+		}
+
+		preqtype := reflect.TypeOf(h.H).In(1)
 		preqv := reflect.New(preqtype.Elem())
 		preq := preqv.Interface() // pointer
 
@@ -82,13 +116,9 @@ func (o *ORPC) Start(ctx context.Context) error {
 			return err
 		}
 
-		prepl := reflect.ValueOf(h).Call(
+		prepl := reflect.ValueOf(h.H).Call(
 			[]reflect.Value{
-				reflect.ValueOf(Context{
-					Ctx:        c.Ctx,
-					MethodName: c.MethodName,
-					Headers:    c.Headers,
-				}),
+				reflect.ValueOf(hc),
 				preqv,
 			},
 		)
@@ -101,4 +131,3 @@ func (o *ORPC) Start(ctx context.Context) error {
 		return c.SendJSON(200, prepl[0].Interface())
 	})
 }
-
