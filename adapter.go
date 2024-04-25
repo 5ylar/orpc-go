@@ -11,6 +11,7 @@ type AdapterCtx struct {
 	MethodName string
 	Headers    map[string][]string
 	Bind       func(dest interface{}) error
+	SetStatus  func(status int)
 }
 
 type Adapter interface {
@@ -36,15 +37,28 @@ func (a *DefaultAdapter) Handle(methodName string, h func(c AdapterCtx) (interfa
 			Ctx:        c.Context(),
 			MethodName: methodName,
 			Headers:    c.GetReqHeaders(),
-			Bind:       c.Bind().Body,
+			Bind: func(dest interface{}) error {
+				err := c.Bind().Body(dest)
+
+				if err != nil {
+					c.Status(422)
+					return err
+				}
+
+				return nil
+			},
+			SetStatus: func(status int) {
+				c.Status(status)
+			},
 		})
 
 		if err != nil {
-			c.Status(500)
-			return err
+			return c.JSON(map[string]interface{}{
+				"error_message": err.Error(),
+			})
 		}
 
-		return c.Status(200).JSON(repl)
+		return c.JSON(repl)
 	})
 }
 

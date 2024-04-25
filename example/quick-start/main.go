@@ -41,5 +41,5 @@ func main() {
 		}, nil
 	})
 
-	_ = o.Start(context.Background())
+	_ = o.Run(context.Background())
 }

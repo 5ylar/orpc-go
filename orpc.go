@@ -9,6 +9,7 @@ type Context struct {
 	Ctx        context.Context
 	MethodName string
 	Headers    map[string][]string
+	SetStatus  func(status int)
 }
 
 type Middleware func(c Context) error
@@ -71,7 +72,7 @@ func (o *ORPC) Handle(name string, h interface{}, middlewares ...Middleware) *OR
 	return o
 }
 
-func (o *ORPC) Start(ctx context.Context) error {
+func (o *ORPC) Run(ctx context.Context) error {
 	for methodName, h := range o.handlers {
 
 		preqtype := reflect.TypeOf(h.H).In(1)
@@ -82,6 +83,7 @@ func (o *ORPC) Start(ctx context.Context) error {
 				Ctx:        c.Ctx,
 				MethodName: methodName,
 				Headers:    c.Headers,
+				SetStatus:  c.SetStatus,
 			}
 
 			for _, m := range o.globalMiddlewares {

@@ -33,10 +33,12 @@ func AuthMiddleware(c orpcgo.Context) error {
 	v, ok := c.Headers["Authorization"]
 
 	if len(v) == 0 || !ok {
+		c.SetStatus(401)
 		return ErrUnauthorized
 	}
 
 	if v[0] != "Dummy abc" {
+		c.SetStatus(401)
 		return ErrUnauthorized
 	}
 
@@ -76,5 +78,5 @@ func main() {
 		IndividualMiddleware,
 	)
 
-	_ = o.Start(context.Background())
+	_ = o.Run(context.Background())
 }
