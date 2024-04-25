@@ -3,6 +3,8 @@ A simple JSON RPC Server with ability to change HTTP Server behind whatever you 
 
 ## Quick start
 ```go
+package main
+
 import (
 	"context"
 	orpcgo "github.com/5ylar/orpc-go"
