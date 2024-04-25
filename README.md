@@ -1,29 +1,54 @@
-## Example usage
+## Quick start
 ```go
 import (
 	"context"
 	orpcgo "github.com/5ylar/orpc-go"
 )
 
-type TestRequest struct {
-	Text string `json:"text"`
+type WalletDepositRequest struct {
+	Amount float64 `json:"amount"`
 }
 
-type TestReply struct {
-	CharNum int `json:"char_num"`
+type WalletDepositReply struct {
+	Balance float64 `json:"balance"`
+}
+
+type GameBetRequest struct {
+	Number int16   `json:"number"`
+	Amount float64 `json:"amount"`
+}
+
+type GameBetReply struct {
+	IsWin   bool    `json:"is_win"`
+	Balance float64 `json:"balance"`
 }
 
 func main() {
-	o := orpcgo.NewORPC()
+	o := orpcgo.NewORPC(
+		orpcgo.NewDefaultAdapter(),
+	)
 
-	o.Register("oms.test", func(ctx orpcgo.Context, i *TestRequest) (*TestReply, error) {
-		return &TestReply{len(i.Text)}, nil
+	o.Handle("wallet.deposit", func(c orpcgo.Context, i *WalletDepositRequest) (*WalletDepositReply, error) {
+		return &WalletDepositReply{
+			i.Amount,
+		}, nil
 	})
 
-	o.Register("oms.test2", func(ctx orpcgo.Context, i *TestRequest) (*TestReply, error) {
-		return &TestReply{1000}, nil
+	o.Handle("game.bet", func(c orpcgo.Context, i *GameBetRequest) (*GameBetReply, error) {
+		return &GameBetReply{
+			IsWin:   false,
+			Balance: 0,
+		}, nil
 	})
 
 	_ = o.Start(context.Background())
 }
+```
+
+```sh
+go run example/with-orpc/main.go
+```
+
+```sh
+curl -X POST http://localhost:8080/rpc/game.bet -d '{"number": 9, "amount": 100}' | jq
 ```
