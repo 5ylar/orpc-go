@@ -49,7 +49,7 @@ func main() {
 ```
 
 ```sh
-go run example/with-orpc/main.go
+go run example/quick-start/main.go
 ```
 
 ```sh
