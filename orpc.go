@@ -5,8 +5,6 @@ import (
 	"errors"
 	"reflect"
 	"strings"
-
-	"github.com/gofiber/fiber/v3"
 )
 
 type Context struct {
