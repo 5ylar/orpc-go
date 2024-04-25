@@ -74,16 +74,16 @@ func (o *ORPC) Handle(name string, h interface{}, middlewares ...Middleware) *OR
 }
 
 func (o *ORPC) Start(ctx context.Context) error {
-	return o.adapter.Start(func(c AdapterCtx) error {
+	return o.adapter.Start(func(c AdapterCtx) (interface{}, error) {
 
 		if len(strings.TrimSpace(c.MethodName)) == 0 {
-			return errors.New("invalid method name")
+			return nil, errors.New("invalid method name")
 		}
 
 		h, ok := o.handlers[c.MethodName]
 
 		if !ok {
-			return errors.New("not found method name")
+			return nil, errors.New("not found method name")
 		}
 
 		hc := Context{
@@ -96,7 +96,7 @@ func (o *ORPC) Start(ctx context.Context) error {
 			err := m(hc)
 
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 
@@ -104,7 +104,7 @@ func (o *ORPC) Start(ctx context.Context) error {
 			err := m(hc)
 
 			if err != nil {
-				return err
+				return nil, err
 			}
 		}
 
@@ -113,7 +113,7 @@ func (o *ORPC) Start(ctx context.Context) error {
 		preq := preqv.Interface() // pointer
 
 		if err := c.Bind(preq); err != nil {
-			return err
+			return nil, err
 		}
 
 		prepl := reflect.ValueOf(h.H).Call(
@@ -125,9 +125,9 @@ func (o *ORPC) Start(ctx context.Context) error {
 
 		// an error
 		if !prepl[1].IsNil() {
-			return prepl[1].Interface().(error)
+			return nil, prepl[1].Interface().(error)
 		}
 
-		return c.SendJSON(200, prepl[0].Interface())
+		return prepl[0].Interface(), nil
 	})
 }

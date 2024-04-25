@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
 
 	orpcgo "github.com/5ylar/orpc-go"
 )
@@ -45,7 +44,6 @@ func AuthMiddleware(c orpcgo.Context) error {
 }
 
 func IndividualMiddleware(c orpcgo.Context) error {
-	log.Println("got it")
 	return nil
 }
 
