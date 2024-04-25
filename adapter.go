@@ -14,7 +14,8 @@ type AdapterCtx struct {
 }
 
 type Adapter interface {
-	Start(h func(c AdapterCtx) (interface{}, error)) error
+	Handle(methodName string, h func(c AdapterCtx) (interface{}, error))
+	Start() error
 }
 
 type DefaultAdapter struct {
@@ -29,10 +30,8 @@ func NewDefaultAdapter() *DefaultAdapter {
 	}
 }
 
-func (a *DefaultAdapter) Start(h func(c AdapterCtx) (interface{}, error)) error {
-	a.app.Post("/rpc/:method_name", func(c fiber.Ctx) error {
-		methodName := c.Params("method_name", "")
-
+func (a *DefaultAdapter) Handle(methodName string, h func(c AdapterCtx) (interface{}, error)) {
+	a.app.Post("/rpc/"+methodName, func(c fiber.Ctx) error {
 		repl, err := h(AdapterCtx{
 			Ctx:        c.Context(),
 			MethodName: methodName,
@@ -47,6 +46,8 @@ func (a *DefaultAdapter) Start(h func(c AdapterCtx) (interface{}, error)) error 
 
 		return c.Status(200).JSON(repl)
 	})
+}
 
+func (a *DefaultAdapter) Start() error {
 	return a.app.Listen(":8080")
 }

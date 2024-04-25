@@ -2,9 +2,7 @@ package orpcgo
 
 import (
 	"context"
-	"errors"
 	"reflect"
-	"strings"
 )
 
 type Context struct {
@@ -74,60 +72,53 @@ func (o *ORPC) Handle(name string, h interface{}, middlewares ...Middleware) *OR
 }
 
 func (o *ORPC) Start(ctx context.Context) error {
-	return o.adapter.Start(func(c AdapterCtx) (interface{}, error) {
+	for methodName, h := range o.handlers {
+		o.adapter.Handle(methodName, func(c AdapterCtx) (interface{}, error) {
+			hc := Context{
+				Ctx:        c.Ctx,
+				MethodName: methodName,
+				Headers:    c.Headers,
+			}
 
-		if len(strings.TrimSpace(c.MethodName)) == 0 {
-			return nil, errors.New("invalid method name")
-		}
+			for _, m := range o.globalMiddlewares {
+				err := m(hc)
 
-		h, ok := o.handlers[c.MethodName]
+				if err != nil {
+					return nil, err
+				}
+			}
 
-		if !ok {
-			return nil, errors.New("not found method name")
-		}
+			for _, m := range h.Middlewares {
+				err := m(hc)
 
-		hc := Context{
-			Ctx:        c.Ctx,
-			MethodName: c.MethodName,
-			Headers:    c.Headers,
-		}
+				if err != nil {
+					return nil, err
+				}
+			}
 
-		for _, m := range o.globalMiddlewares {
-			err := m(hc)
+			preqtype := reflect.TypeOf(h.H).In(1)
+			preqv := reflect.New(preqtype.Elem())
+			preq := preqv.Interface() // pointer
 
-			if err != nil {
+			if err := c.Bind(preq); err != nil {
 				return nil, err
 			}
-		}
 
-		for _, m := range h.Middlewares {
-			err := m(hc)
+			prepl := reflect.ValueOf(h.H).Call(
+				[]reflect.Value{
+					reflect.ValueOf(hc),
+					preqv,
+				},
+			)
 
-			if err != nil {
-				return nil, err
+			// an error
+			if !prepl[1].IsNil() {
+				return nil, prepl[1].Interface().(error)
 			}
-		}
 
-		preqtype := reflect.TypeOf(h.H).In(1)
-		preqv := reflect.New(preqtype.Elem())
-		preq := preqv.Interface() // pointer
+			return prepl[0].Interface(), nil
+		})
+	}
 
-		if err := c.Bind(preq); err != nil {
-			return nil, err
-		}
-
-		prepl := reflect.ValueOf(h.H).Call(
-			[]reflect.Value{
-				reflect.ValueOf(hc),
-				preqv,
-			},
-		)
-
-		// an error
-		if !prepl[1].IsNil() {
-			return nil, prepl[1].Interface().(error)
-		}
-
-		return prepl[0].Interface(), nil
-	})
+	return o.adapter.Start()
 }
