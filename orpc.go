@@ -73,6 +73,10 @@ func (o *ORPC) Handle(name string, h interface{}, middlewares ...Middleware) *OR
 
 func (o *ORPC) Start(ctx context.Context) error {
 	for methodName, h := range o.handlers {
+
+		preqtype := reflect.TypeOf(h.H).In(1)
+		hr := reflect.ValueOf(h.H)
+
 		o.adapter.Handle(methodName, func(c AdapterCtx) (interface{}, error) {
 			hc := Context{
 				Ctx:        c.Ctx,
@@ -96,7 +100,6 @@ func (o *ORPC) Start(ctx context.Context) error {
 				}
 			}
 
-			preqtype := reflect.TypeOf(h.H).In(1)
 			preqv := reflect.New(preqtype.Elem())
 			preq := preqv.Interface() // pointer
 
@@ -104,7 +107,7 @@ func (o *ORPC) Start(ctx context.Context) error {
 				return nil, err
 			}
 
-			prepl := reflect.ValueOf(h.H).Call(
+			prepl := hr.Call(
 				[]reflect.Value{
 					reflect.ValueOf(hc),
 					preqv,
